@@ -41,6 +41,8 @@ export const authRoutes = new Elysia()
           httpOnly: true,
           path: "/",
           maxAge: 2592000, // 30 days
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         });
         set.status = 200;
         return { message: result.message, userId: result.userId };
@@ -81,6 +83,8 @@ export const authRoutes = new Elysia()
           httpOnly: true,
           path: "/",
           maxAge: 2592000, // 30 days
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         });
         set.status = 200;
         return { message: "Token refreshed" };
