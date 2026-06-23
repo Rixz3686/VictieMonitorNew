@@ -13,29 +13,18 @@ import { isAppError } from "./src/utils/errors";
 // Di development, default dinamis (mengikuti origin request agar credentials: true berfungsi)
 const PORT = Number(process.env.PORT) || 3002;
 
+// Jika CORS_ORIGIN diset, gunakan list origin spesifik; jika tidak, izinkan semua origin (reflect)
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  : true; // true = reflect request origin (aman dengan credentials)
+
 const app = new Elysia()
   .use(
     cors({
-      origin: (request) => {
-        const origin = request.headers.get("origin");
-        if (!origin) return false;
-
-        const allowedOriginEnv = process.env.CORS_ORIGIN;
-        if (!allowedOriginEnv) {
-          // Jika env CORS_ORIGIN kosong, izinkan origin request secara dinamis (echo origin)
-          return true;
-        }
-
-        // Split jika ada beberapa origin (koma), hilangkan spasi dan trailing slash
-        const allowedOrigins = allowedOriginEnv
-          .split(",")
-          .map((o) => o.trim().replace(/\/$/, ""));
-        
-        const requestOriginNormalized = origin.trim().replace(/\/$/, "");
-
-        return allowedOrigins.includes(requestOriginNormalized);
-      },
+      origin: corsOrigin,
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })
   )
   .use(setup)
