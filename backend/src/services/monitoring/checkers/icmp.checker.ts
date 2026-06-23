@@ -11,17 +11,108 @@ interface PipedSubprocess {
   kill: () => void;
 }
 
+/**
+ * Cache whether ping is available on this system.
+ * null = not yet checked, true = available, false = not available
+ */
+let pingAvailable: boolean | null = null;
+
+/**
+ * Detect if the `ping` command is available on the system.
+ * Runs once and caches the result.
+ */
+async function isPingAvailable(): Promise<boolean> {
+  if (pingAvailable !== null) return pingAvailable;
+
+  const isWindows = process.platform === "win32";
+  const cmd = isWindows
+    ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\ping.exe`
+    : "ping";
+
+  try {
+    // Try to spawn ping with help flag to see if it exists
+    const proc = spawn([cmd, isWindows ? "/?" : "-h"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }) as unknown as PipedSubprocess;
+
+    // Consume streams to avoid hanging
+    await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+
+    // If we get here without error, ping exists
+    pingAvailable = true;
+    console.log("[ICMP] ping command detected, using native ICMP checks.");
+  } catch {
+    pingAvailable = false;
+    console.warn(
+      "[ICMP] ping command not found on this system. ICMP checks will use TCP connectivity fallback.",
+    );
+  }
+
+  return pingAvailable;
+}
+
+/**
+ * TCP-based "reachability" check used as ICMP fallback.
+ * Tries ports 443, then 80 to determine if host is up.
+ */
+async function tcpFallbackCheck(
+  target: Target,
+  start: number,
+): Promise<{ status: "UP" | "DOWN"; latency: number; errorReason?: string; errorDetails?: string }> {
+  // Try port 443 (HTTPS) first
+  const fallback443 = await checkTCP({ ...target, protocol: "TCP", port: 443 });
+  if (fallback443.status === "UP") {
+    return {
+      status: "UP",
+      latency: fallback443.latency,
+    };
+  }
+
+  // Try port 80 (HTTP) as second fallback
+  const fallback80 = await checkTCP({ ...target, protocol: "TCP", port: 80 });
+  if (fallback80.status === "UP") {
+    return {
+      status: "UP",
+      latency: fallback80.latency,
+    };
+  }
+
+  return {
+    status: "DOWN",
+    latency: Math.round(performance.now() - start),
+    errorReason: "Host Unreachable",
+    errorDetails: `Host did not respond on TCP ports 443 and 80. The host may be down or blocking connections.`,
+  };
+}
+
 export async function checkICMP(
   target: Target,
 ): Promise<{ status: "UP" | "DOWN"; latency: number; errorReason?: string; errorDetails?: string }> {
+  const start = performance.now();
+
+  // If ping is not available (e.g. Docker/Railway container), use TCP fallback directly
+  const hasPing = await isPingAvailable();
+  if (!hasPing) {
+    return tcpFallbackCheck(target, start);
+  }
+
+  // Native ping check
   const isWindows = process.platform === "win32";
   const timeoutSec = Math.ceil(ICMP_TIMEOUT_MS / 1000);
 
-  const pingArgs = isWindows
-    ? ["ping", "-n", "1", "-w", String(ICMP_TIMEOUT_MS), target.host]
-    : ["ping", "-c", "1", "-W", String(timeoutSec), target.host];
+  const pingCmd = isWindows
+    ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\ping.exe`
+    : "ping";
 
-  const start = performance.now();
+  const pingArgs = isWindows
+    ? [pingCmd, "-n", "1", "-w", String(ICMP_TIMEOUT_MS), target.host]
+    : [pingCmd, "-c", "1", "-W", String(timeoutSec), target.host];
+
   let timerId: Timer | null = null;
   const processHandle: { kill?: () => void } = {};
 
@@ -81,29 +172,23 @@ export async function checkICMP(
 
     const error = err as Error & { code?: string };
     const errorMsg = String(error?.message || error || "");
+
+    // If ping suddenly fails (permission issue, etc.), fallback to TCP
     const isOsError =
       errorMsg.includes("UNSUPPORTED_OS") ||
       error?.code === "UNSUPPORTED_OS" ||
       errorMsg.includes("Operation not permitted") ||
+      errorMsg.includes("not found in $PATH") ||
+      errorMsg.includes("Executable not found") ||
       errorMsg.includes("socket");
 
     if (isOsError) {
       console.warn(
-        `[ICMP] OS tidak mendukung raw socket untuk "${target.host}", fallback ke TCP port 443/80...`,
+        `[ICMP] ping failed for "${target.host}" (${errorMsg}), falling back to TCP...`,
       );
-      
-      const fallback443 = await checkTCP({ ...target, protocol: "TCP", port: 443 });
-      if (fallback443.status === "UP") return fallback443;
-
-      const fallback80 = await checkTCP({ ...target, protocol: "TCP", port: 80 });
-      if (fallback80.status === "UP") return fallback80;
-      
-      return {
-        status: "DOWN",
-        latency: Math.round(performance.now() - start),
-        errorReason: "Host Unreachable (TCP Fallback)",
-        errorDetails: `ICMP raw socket not supported by OS. Fallback TCP checks on ports 443 and 80 also failed.`
-      };
+      // Mark ping as unavailable so future checks skip directly to TCP
+      pingAvailable = false;
+      return tcpFallbackCheck(target, start);
     }
 
     if (errorMsg.includes("ICMP Timeout")) {
