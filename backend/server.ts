@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { cors } from "@elysiajs/cors";
 
 import { setup } from "./src/setup";
 import { authRoutes } from "./src/routes/auth.routes";
@@ -9,26 +8,53 @@ import { logsRoutes } from "./src/routes/logs.routes";
 import { startMonitoringWorker } from "./src/services/monitoring/worker.service";
 import { isAppError } from "./src/utils/errors";
 
-// CORS: di production, set CORS_ORIGIN ke domain frontend (contoh: "https://monitoring.yourdomain.com")
-// Di development, default dinamis (mengikuti origin request agar credentials: true berfungsi)
 const PORT = Number(process.env.PORT) || 3002;
 
-// Jika CORS_ORIGIN diset, gunakan list origin spesifik; jika tidak, izinkan semua origin (reflect)
-const corsOrigin = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
-  : true; // true = reflect request origin (aman dengan credentials)
+// ── Helper: tambahkan CORS headers ke set.headers ─────────────────
+const addCorsHeaders = (
+  headers: Record<string, string | number | string[] | undefined>,
+  origin: string | null,
+) => {
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+    headers["Access-Control-Allow-Methods"] =
+      "GET, POST, PUT, DELETE, PATCH, OPTIONS";
+    headers["Access-Control-Allow-Headers"] =
+      "Content-Type, Authorization, Cookie";
+  }
+};
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: corsOrigin,
-      credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    })
-  )
+  // ── CORS: handle preflight & inject headers ke SEMUA response ────
+  .onRequest(({ request, set }) => {
+    const origin = request.headers.get("origin");
+
+    // Tambah CORS headers untuk semua request
+    addCorsHeaders(set.headers, origin);
+
+    // Handle OPTIONS preflight — langsung kembalikan 204 dengan headers lengkap
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": origin || "*",
+          "Access-Control-Allow-Credentials": "true",
+          "Access-Control-Allow-Methods":
+            "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, Cookie",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+  })
   .use(setup)
-  .onError(({ code, error, set }) => {
+  // ── Error handler: pastikan CORS headers juga ada di error response ──
+  .onError(({ code, error, set, request }) => {
+    const origin = request.headers.get("origin");
+    addCorsHeaders(set.headers, origin);
+
     if (isAppError(error)) {
       set.status = error.statusCode;
       return { error: error.message };
