@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./backend
+    container_name: lgn-backend-testing
+    environment:
+      - NODE_ENV=testing
+    ports:
+      - "3002:3002"
+    volumes:
+      # Menggunakan folder terpisah untuk testing agar tidak mengganggu data production
+      - ./backend_test_data:/app/data
+    restart: on-failure
+
+  frontend:
+    build: ./frontend
+    container_name: lgn-frontend-testing
+    environment:
+      - NODE_ENV=testing
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: on-failure

@@ -1,0 +1,163 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --primary: #dd7b8d;
+  --secondary: #dd7b8d;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --surface: #FFFFFF;
+  --text: #111827;
+
+  --accent: var(--primary);
+  --accent-light: rgba(221, 123, 141, 0.1);
+  --accent-mid: rgba(221, 123, 141, 0.5);
+  --accent-dark: #c5697a;
+  --accent-glow: rgba(221, 123, 141, 0.15);
+  --accent-light-solid: #dd7b8d;
+
+  --sidebar-bg: linear-gradient(180deg, #2D1320 0%, #1A0A14 50%, #1E0F18 100%);
+  --sidebar-bg-solid: #2D1320;
+  --sidebar-bg-alt: #3A1A2A;
+  --sidebar-text: rgba(255, 255, 255, 0.85);
+  --sidebar-active: rgba(221, 123, 141, 0.18);
+  --sidebar-active-solid: #dd7b8d;
+  --sidebar-hover: rgba(221, 123, 141, 0.08);
+  --sidebar-w: 260px;
+  --sidebar-w-min: 72px;
+
+  --bg-base: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F1F5F9;
+
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --border-accent: rgba(221, 123, 141, 0.2);
+
+  --text-heading: #111827;
+  --text-body: #334155;
+  --text-muted: #64748B;
+  --text-subtle: #94A3B8;
+
+  --status-up: var(--success);
+  --status-up-bg: rgba(22, 163, 74, 0.1);
+  --status-up-border: rgba(22, 163, 74, 0.3);
+  --status-down: var(--danger);
+  --status-down-bg: rgba(220, 38, 38, 0.1);
+  --status-down-border: rgba(220, 38, 38, 0.3);
+
+  --chart-line: #dd7b8d;
+  --chart-fill: rgba(221, 123, 141, 0.1);
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 50px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.12);
+  --shadow-accent: 0 4px 14px rgba(221, 123, 141, 0.25);
+
+  --topbar-h: 64px;
+
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s var(--ease-out);
+}
+a:hover {
+  color: var(--accent-dark);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Oswald", sans-serif;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
+}
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInLeft { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+@keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+.anim-fade-up { animation: fadeInUp 0.4s var(--ease-out) both; }
+.anim-slide-in { animation: slideInLeft 0.3s var(--ease-out) both; }
+.anim-slide-right { animation: slideInRight 0.3s var(--ease-out) both; }
+.anim-scale-in { animation: scaleIn 0.25s var(--ease-out) both; }
+
+input,
+button,
+select,
+textarea {
+  font-family: "Poppins", sans-serif;
+}
+
+input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+
+::selection {
+  background: rgba(221, 123, 141, 0.2);
+  color: var(--text-heading);
+}
