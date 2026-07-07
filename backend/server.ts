@@ -24,7 +24,7 @@ const addCorsHeaders = (
   }
 };
 
-const app = new Elysia()
+const app = new Elysia({ aot: false })
   // CORS: handle preflight & inject headers ke SEMUA response
   .onRequest(({ request, set }) => {
     const origin = request.headers.get("origin");
