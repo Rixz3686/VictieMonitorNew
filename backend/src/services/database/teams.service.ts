@@ -2,8 +2,8 @@ import db from "../../config/database";
 import type { Team } from "../../types";
 
 export const teamsService = {
-  findByUserId(userId: string) {
-    return db
+  async findByUserId(userId: string) {
+    return await db
       .query(
         `SELECT t.id, t.name, tm.role 
          FROM teams t 
@@ -13,57 +13,57 @@ export const teamsService = {
       .all({ $userId: userId });
   },
 
-  findById(teamId: string): Team | null {
-    return db
+  async findById(teamId: string): Promise<Team | null> {
+    return (await db
       .query("SELECT * FROM teams WHERE id = $id")
-      .get({ $id: teamId }) as Team | null;
+      .get({ $id: teamId })) as Team | null;
   },
 
-  create(id: string, name: string, userId: string): void {
-    db.transaction(() => {
-      db.query("INSERT INTO teams (id, name) VALUES ($id, $name)").run({
+  async create(id: string, name: string, userId: string): Promise<void> {
+    await db.batch([
+      db.query("INSERT INTO teams (id, name) VALUES ($id, $name)").raw({
         $id: id,
         $name: name,
-      });
+      }),
       db.query(
         "INSERT INTO team_members (team_id, user_id, role) VALUES ($t, $u, 'ADMIN')"
-      ).run({ $t: id, $u: userId });
-    })();
+      ).raw({ $t: id, $u: userId })
+    ]);
   },
 
-  delete(teamId: string): void {
-    db.transaction(() => {
+  async delete(teamId: string): Promise<void> {
+    await db.batch([
       db.query(
         "DELETE FROM ping_history WHERE target_id IN (SELECT id FROM targets WHERE team_id = $t)"
-      ).run({ $t: teamId });
+      ).raw({ $t: teamId }),
       db.query(
         "DELETE FROM incident_logs WHERE target_id IN (SELECT id FROM targets WHERE team_id = $t)"
-      ).run({ $t: teamId });
-      db.query("DELETE FROM targets WHERE team_id = $t").run({ $t: teamId });
-      db.query("DELETE FROM team_members WHERE team_id = $t").run({
+      ).raw({ $t: teamId }),
+      db.query("DELETE FROM targets WHERE team_id = $t").raw({ $t: teamId }),
+      db.query("DELETE FROM team_members WHERE team_id = $t").raw({
         $t: teamId,
-      });
-      db.query("DELETE FROM teams WHERE id = $t").run({ $t: teamId });
-    })();
+      }),
+      db.query("DELETE FROM teams WHERE id = $t").raw({ $t: teamId })
+    ]);
   },
 
-  getMemberRole(teamId: string, userId: string): { role: string } | null {
-    return db
+  async getMemberRole(teamId: string, userId: string): Promise<{ role: string } | null> {
+    return (await db
       .query(
         "SELECT role FROM team_members WHERE team_id = $t AND user_id = $u"
       )
-      .get({ $t: teamId, $u: userId }) as { role: string } | null;
+      .get({ $t: teamId, $u: userId })) as { role: string } | null;
   },
 
-  isMember(teamId: string, userId: string): boolean {
-    const result = db
+  async isMember(teamId: string, userId: string): Promise<boolean> {
+    const result = await db
       .query("SELECT 1 FROM team_members WHERE team_id = $t AND user_id = $u")
       .get({ $t: teamId, $u: userId });
     return !!result;
   },
 
-  getLogs(teamId: string, limit: number = 100) {
-    return db
+  async getLogs(teamId: string, limit: number = 100) {
+    return await db
       .query(
         `SELECT l.id, t.name as target_name, t.host as target_host, t.protocol as target_protocol, l.status, l.created_at 
          FROM incident_logs l 
@@ -75,8 +75,8 @@ export const teamsService = {
       .all({ $teamId: teamId, $limit: limit });
   },
 
-  clearLogs(teamId: string): void {
-    db.query(
+  async clearLogs(teamId: string): Promise<void> {
+    await db.query(
       `DELETE FROM incident_logs 
        WHERE target_id IN (SELECT id FROM targets WHERE team_id = $teamId)`
     ).run({ $teamId: teamId });

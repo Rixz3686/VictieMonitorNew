@@ -1,7 +1,6 @@
 import type { Target } from "../../types";
 import { sendTelegramAlert } from "./telegram.service";
 import { sendDiscordAlert } from "./discord.service";
-import { sendEmailAlert } from "./email.service";
 
 export async function sendNotifications(
   target: Target,
@@ -17,10 +16,8 @@ export async function sendNotifications(
   await Promise.all([
     sendTelegramAlert(telegramMessage),
     sendDiscordAlert(target, status, latency),
-    sendEmailAlert(target, status, latency),
   ]);
 }
 
 export * from "./telegram.service";
 export * from "./discord.service";
-export * from "./email.service";

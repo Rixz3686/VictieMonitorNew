@@ -1,17 +1,18 @@
 import { usersService } from "../services/database/users.service";
 import type { JwtToken } from "../types";
+import bcrypt from "bcryptjs";
 
 export const authController = {
   async register(email: string, password: string) {
-    const hash = await Bun.password.hash(password);
+    const hash = await bcrypt.hash(password, 10);
     const userId = crypto.randomUUID();
-    usersService.create(userId, email, hash);
+    await usersService.create(userId, email, hash);
     return { message: "Registrasi berhasil", userId };
   },
 
   async login(email: string, password: string, jwt: JwtToken) {
-    const user = usersService.findByEmail(email);
-    if (!user || !(await Bun.password.verify(password, user.password_hash))) {
+    const user = await usersService.findByEmail(email);
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       throw new Error("Invalid credentials");
     }
     // Token berlaku 30 hari

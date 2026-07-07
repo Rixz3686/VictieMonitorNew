@@ -60,27 +60,27 @@ const getPingHistoryStmt = db.query(
 );
 
 export const targetsService = {
-  findByTeamId(teamId: string): Target[] {
-    return findByTeamIdStmt.all({ $t: teamId }) as Target[];
+  async findByTeamId(teamId: string): Promise<Target[]> {
+    return await findByTeamIdStmt.all({ $t: teamId }) as Target[];
   },
 
-  findById(targetId: string, teamId: string): Target | null {
-    return findByIdStmt.get({ $id: targetId, $t: teamId }) as Target | null;
+  async findById(targetId: string, teamId: string): Promise<Target | null> {
+    return (await findByIdStmt.get({ $id: targetId, $t: teamId })) as Target | null;
   },
 
-  findAll(): Target[] {
-    return findAllStmt.all() as Target[];
+  async findAll(): Promise<Target[]> {
+    return await findAllStmt.all() as Target[];
   },
 
-  findDueTargets(now: number): Target[] {
-    return findDueTargetsStmt.all({ $now: now }) as Target[];
+  async findDueTargets(now: number): Promise<Target[]> {
+    return await findDueTargetsStmt.all({ $now: now }) as Target[];
   },
 
-  updateNextCheckTime(targetId: string, nextCheckAt: number): void {
-    updateNextCheckTimeStmt.run({ $next: nextCheckAt, $id: targetId });
+  async updateNextCheckTime(targetId: string, nextCheckAt: number): Promise<void> {
+    await updateNextCheckTimeStmt.run({ $next: nextCheckAt, $id: targetId });
   },
 
-  create(data: {
+  async create(data: {
     id: string;
     teamId: string;
     name: string;
@@ -88,9 +88,9 @@ export const targetsService = {
     port: number | null;
     protocol: string;
     intervalSeconds: number;
-  }): void {
-    db.transaction(() => {
-      createTargetStmt.run({
+  }): Promise<void> {
+    await db.batch([
+      createTargetStmt.raw({
         $id: data.id,
         $t: data.teamId,
         $n: data.name,
@@ -99,18 +99,18 @@ export const targetsService = {
         $pr: data.protocol,
         $i: data.intervalSeconds,
         $next: Date.now(),
-      });
-      insertIncidentLogStmt.run({
+      }),
+      insertIncidentLogStmt.raw({
         $id: crypto.randomUUID(),
         $t: data.id,
         $s: "START",
         $r: null,
         $d: null,
-      });
-    })();
+      })
+    ]);
   },
 
-  update(
+  async update(
     targetId: string,
     teamId: string,
     updates: {
@@ -120,7 +120,7 @@ export const targetsService = {
       protocol?: string;
       intervalSeconds?: number;
     }
-  ): void {
+  ): Promise<void> {
     const setClauses: string[] = [];
     const params: Record<string, any> = { $id: targetId, $t: teamId };
 
@@ -149,30 +149,30 @@ export const targetsService = {
     }
 
     if (setClauses.length > 0) {
-      db.query(
+      await db.query(
         `UPDATE targets SET ${setClauses.join(", ")} WHERE id = $id AND team_id = $t`
       ).run(params);
     }
   },
 
-  delete(targetId: string, teamId: string): void {
-    db.transaction(() => {
-      deletePingHistoryStmt.run({ $id: targetId });
-      deleteIncidentLogsStmt.run({ $id: targetId });
-      deleteTargetStmt.run({ $id: targetId, $t: teamId });
-    })();
+  async delete(targetId: string, teamId: string): Promise<void> {
+    await db.batch([
+      deletePingHistoryStmt.raw({ $id: targetId }),
+      deleteIncidentLogsStmt.raw({ $id: targetId }),
+      deleteTargetStmt.raw({ $id: targetId, $t: teamId })
+    ]);
   },
 
-  updateStatus(targetId: string, status: string, latency: number): void {
-    updateStatusStmt.run({
+  async updateStatus(targetId: string, status: string, latency: number): Promise<void> {
+    await updateStatusStmt.run({
       $status: status,
       $latency: latency,
       $id: targetId,
     });
   },
 
-  insertPingHistory(targetId: string, status: string, latency: number): void {
-    insertPingHistoryStmt.run({
+  async insertPingHistory(targetId: string, status: string, latency: number): Promise<void> {
+    await insertPingHistoryStmt.run({
       $id: crypto.randomUUID(),
       $t: targetId,
       $s: status,
@@ -180,16 +180,16 @@ export const targetsService = {
     });
   },
 
-  prunePingHistory(targetId: string, limit: number = 360): void {
-    prunePingHistoryStmt.run({ $t: targetId, $limit: limit });
+  async prunePingHistory(targetId: string, limit: number = 360): Promise<void> {
+    await prunePingHistoryStmt.run({ $t: targetId, $limit: limit });
   },
 
-  pruneAllPingHistory(limit: number = 360): void {
-    pruneAllPingHistoryStmt.run({ $limit: limit });
+  async pruneAllPingHistory(limit: number = 360): Promise<void> {
+    await pruneAllPingHistoryStmt.run({ $limit: limit });
   },
 
-  insertIncidentLog(targetId: string, status: string, reason?: string | null, details?: string | null): void {
-    insertIncidentLogStmt.run({
+  async insertIncidentLog(targetId: string, status: string, reason?: string | null, details?: string | null): Promise<void> {
+    await insertIncidentLogStmt.run({
       $id: crypto.randomUUID(),
       $t: targetId,
       $s: status,
@@ -198,11 +198,11 @@ export const targetsService = {
     });
   },
 
-  getIncidentLogsByTarget(targetId: string, teamId: string) {
-    return getIncidentLogsByTargetStmt.all({ $t: targetId, $teamId: teamId });
+  async getIncidentLogsByTarget(targetId: string, teamId: string) {
+    return await getIncidentLogsByTargetStmt.all({ $t: targetId, $teamId: teamId });
   },
 
-  getPingHistory(targetId: string, teamId: string) {
-    return getPingHistoryStmt.all({ $t: targetId, $teamId: teamId });
+  async getPingHistory(targetId: string, teamId: string) {
+    return await getPingHistoryStmt.all({ $t: targetId, $teamId: teamId });
   },
 };

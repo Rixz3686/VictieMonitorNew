@@ -13,7 +13,7 @@ export const checkTeamAccess = async (
   }
   
   const { teamsService } = await import("../services/database/teams.service");
-  const isMember = teamsService.isMember(teamId, (payload as JwtPayload).id);
+  const isMember = await teamsService.isMember(teamId, (payload as JwtPayload).id);
   
   if (!isMember) {
     set.status = 403;

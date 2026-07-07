@@ -1,4 +1,5 @@
 import type { Target } from "../../types";
+import process from "node:process";
 
 export async function sendDiscordAlert(
   target: Target,

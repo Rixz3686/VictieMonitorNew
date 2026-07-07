@@ -1,0 +1,18 @@
+name = "victie-monitor-backend"
+main = "server.ts"
+compatibility_date = "2024-04-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "victie-monitor-db"
+database_id = "e654d1c1-a250-4f57-acc2-cfbac6bf91bd" # Ganti dengan ID hasil dari perintah 'wrangler d1 create'
+
+[triggers]
+crons = [ "* * * * *" ]
+
+[vars]
+JWT_SECRET = "VictieMonitorSecretAman123!@#"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1481117360646656123/mrLBnvUk7Y_vWhrsccKq5bjJW4uwFhzKrJyHzdXiOuSsHecAx04nhUe5l6EY3ukWFoqn"
+TELEGRAM_BOT_TOKEN = "8761305510:AAGUxpQXsza1spLmAXMI8dW5l5hq5SHEj7Q"
+TELEGRAM_CHAT_ID = "1368975371"

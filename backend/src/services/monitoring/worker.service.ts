@@ -5,18 +5,6 @@ import { sendNotifications } from "../notifications";
 import { targetsService } from "../database/targets.service";
 import { HISTORY_LIMIT } from "../../config/constants";
 
-declare global {
-  var monitorInterval: Timer | undefined;
-  var pruningInterval: Timer | undefined;
-}
-
-if (globalThis.monitorInterval) {
-  clearTimeout(globalThis.monitorInterval);
-}
-if (globalThis.pruningInterval) {
-  clearInterval(globalThis.pruningInterval);
-}
-
 const isChecking = new Set<string>();
 
 async function handleTarget(target: Target, now: number) {
@@ -29,69 +17,56 @@ async function handleTarget(target: Target, now: number) {
 
     if (status === "DOWN" && oldStatus !== "DOWN") {
       sendNotifications(target, "DOWN", 0).catch((err) => console.error("[Worker] Gagal mengirim notifikasi:", err));
-      targetsService.insertIncidentLog(target.id, "DOWN", errorReason, errorDetails);
+      await targetsService.insertIncidentLog(target.id, "DOWN", errorReason, errorDetails);
     } else if (status === "UP" && oldStatus === "DOWN") {
       sendNotifications(target, "UP", latency).catch((err) => console.error("[Worker] Gagal mengirim notifikasi:", err));
-      targetsService.insertIncidentLog(target.id, "UP");
+      await targetsService.insertIncidentLog(target.id, "UP");
     }
 
-    db.transaction(() => {
-      targetsService.updateStatus(target.id, status, latency);
-      targetsService.insertPingHistory(target.id, status, latency);
-    })();
+    await targetsService.updateStatus(target.id, status, latency);
+    await targetsService.insertPingHistory(target.id, status, latency);
   } catch (err) {
     console.error(`[Worker] Gagal mengecek target "${target.name}" (${target.host}):`, err);
   } finally {
     isChecking.delete(target.id);
-    
     const intervalMs = Math.max(target.interval_seconds || 60, 5) * 1000;
-    targetsService.updateNextCheckTime(target.id, Date.now() + intervalMs);
+    await targetsService.updateNextCheckTime(target.id, Date.now() + intervalMs);
   }
 }
 
-export function startMonitoringWorker() {
-  console.log("⚙️  Background Worker berjalan");
+export async function runScheduledCheck() {
+  const now = Date.now();
+  try {
+    const targets = await targetsService.findDueTargets(now);
+    
+    if (targets.length > 0) {
+      // Lock targets immediately
+      await Promise.all(targets.map((target) => {
+        const lockDuration = Math.max(target.interval_seconds || 60, 30) * 1000;
+        return targetsService.updateNextCheckTime(target.id, now + lockDuration);
+      }));
 
-  const runLoop = async () => {
-    try {
-      const now = Date.now();
-      const targets = targetsService.findDueTargets(now);
-      
-      if (targets.length > 0) {
-        db.transaction(() => {
-          for (const target of targets) {
-            const lockDuration = Math.max(target.interval_seconds || 60, 30) * 1000;
-            targetsService.updateNextCheckTime(target.id, now + lockDuration);
-          }
-        })();
-
-        await Promise.allSettled(targets.map((target) => handleTarget(target, now)));
-      }
-    } catch (err) {
-      console.error("[Worker] Error pada scheduler loop:", err);
-    } finally {
-      globalThis.monitorInterval = setTimeout(runLoop, 1000);
+      // Check all targets in parallel
+      await Promise.allSettled(targets.map((target) => handleTarget(target, now)));
     }
-  };
 
-  globalThis.monitorInterval = setTimeout(runLoop, 1000);
-
-  console.log("⚙️  Background Pruner dijadwalkan");
-  globalThis.pruningInterval = setInterval(() => {
-    try {
+    // Perform pruning occasionally (approx. 10% of execution runs)
+    if (Math.random() < 0.10) {
       console.log("🧹 Memulai pembersihan histori ping lama secara massal...");
-      targetsService.pruneAllPingHistory(HISTORY_LIMIT);
+      await targetsService.pruneAllPingHistory(HISTORY_LIMIT);
       console.log("🧹 Pembersihan histori ping selesai.");
-    } catch (err) {
-      console.error("[Worker] Gagal membersihkan histori ping:", err);
     }
-  }, 15 * 60 * 1000); // 15 menit
-  
-  setTimeout(() => {
-    try {
-      targetsService.pruneAllPingHistory(HISTORY_LIMIT);
-    } catch (err) {
-      console.error("[Worker] Gagal melakukan pruning awal:", err);
-    }
-  }, 5000);
+  } catch (err) {
+    console.error("[Worker] Error pada scheduler loop:", err);
+  }
+}
+
+// For backward compatibility / local development start
+export function startMonitoringWorker() {
+  console.log("⚙️  Background Worker berjalan (mode local dev)");
+  const runLoop = async () => {
+    await runScheduledCheck();
+    setTimeout(runLoop, 1000);
+  };
+  setTimeout(runLoop, 1000);
 }

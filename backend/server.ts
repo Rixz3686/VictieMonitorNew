@@ -1,16 +1,15 @@
 import { Elysia } from "elysia";
+import process from "node:process";
 
 import { setup } from "./src/setup";
 import { authRoutes } from "./src/routes/auth.routes";
 import { teamsRoutes } from "./src/routes/teams.routes";
 import { targetsRoutes } from "./src/routes/targets.routes";
 import { logsRoutes } from "./src/routes/logs.routes";
-import { startMonitoringWorker } from "./src/services/monitoring/worker.service";
+import { startMonitoringWorker, runScheduledCheck } from "./src/services/monitoring/worker.service";
 import { isAppError } from "./src/utils/errors";
 
-const PORT = Number(process.env.PORT) || 3002;
-
-// ── Helper: tambahkan CORS headers ke set.headers ─────────────────
+// Helper: tambahkan CORS headers ke set.headers
 const addCorsHeaders = (
   headers: Record<string, string | number | string[] | undefined>,
   origin: string | null,
@@ -26,7 +25,7 @@ const addCorsHeaders = (
 };
 
 const app = new Elysia()
-  // ── CORS: handle preflight & inject headers ke SEMUA response ────
+  // CORS: handle preflight & inject headers ke SEMUA response
   .onRequest(({ request, set }) => {
     const origin = request.headers.get("origin");
 
@@ -50,7 +49,7 @@ const app = new Elysia()
     }
   })
   .use(setup)
-  // ── Error handler: pastikan CORS headers juga ada di error response ──
+  // Error handler: pastikan CORS headers juga ada di error response
   .onError(({ code, error, set, request }) => {
     const origin = request.headers.get("origin");
     addCorsHeaders(set.headers, origin);
@@ -73,7 +72,21 @@ const app = new Elysia()
   .use(targetsRoutes)
   .use(logsRoutes);
 
-app.listen(PORT);
+// Deteksi jika tidak berjalan di Cloudflare Workers / Wrangler
+const isLocalBun = typeof Bun !== "undefined" && !process.env.CF_PAGES && !process.env.WRANGLER && !globalThis.hasOwnProperty("WebSocketPair");
 
-startMonitoringWorker();
-console.log(`🦊 Backend API berjalan di http://localhost:${PORT}`);
+if (isLocalBun) {
+  const PORT = Number(process.env.PORT) || 3002;
+  app.listen(PORT);
+  startMonitoringWorker();
+  console.log(`🦊 Backend API berjalan di http://localhost:${PORT}`);
+}
+
+export default {
+  fetch(request: Request, env: any, ctx: any) {
+    return app.handle(request);
+  },
+  async scheduled(event: any, env: any, ctx: any) {
+    ctx.waitUntil(runScheduledCheck());
+  }
+};

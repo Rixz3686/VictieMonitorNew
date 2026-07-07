@@ -4,7 +4,7 @@ import { BadRequestError, NotFoundError } from "../utils/errors";
 
 export const targetsController = {
   async getTargets(teamId: string) {
-    const targets = targetsService.findByTeamId(teamId);
+    const targets = await targetsService.findByTeamId(teamId);
     return { targets };
   },
 
@@ -43,7 +43,7 @@ export const targetsController = {
     }
 
     const id = crypto.randomUUID();
-    targetsService.create({
+    await targetsService.create({
       id,
       teamId,
       name: data.name,
@@ -80,7 +80,7 @@ export const targetsController = {
       data.protocol = protocol;
     }
 
-    const currentTarget = targetsService.findById(targetId, teamId);
+    const currentTarget = await targetsService.findById(targetId, teamId);
     if (!currentTarget) {
       throw new NotFoundError("Target tidak ditemukan");
     }
@@ -117,26 +117,26 @@ export const targetsController = {
       updates.intervalSeconds = Math.max(5, data.interval_seconds);
     }
 
-    targetsService.update(targetId, teamId, updates);
+    await targetsService.update(targetId, teamId, updates);
     return { message: "Updated" };
   },
 
   async deleteTarget(targetId: string, teamId: string) {
-    const target = targetsService.findById(targetId, teamId);
+    const target = await targetsService.findById(targetId, teamId);
     if (!target) {
       throw new NotFoundError("Target tidak ditemukan atau akses ditolak");
     }
-    targetsService.delete(targetId, teamId);
+    await targetsService.delete(targetId, teamId);
     return { message: "Deleted" };
   },
 
   async getTargetHistory(targetId: string, teamId: string) {
-    const history = targetsService.getPingHistory(targetId, teamId);
+    const history = await targetsService.getPingHistory(targetId, teamId);
     return { history };
   },
 
   async getTargetIncidents(targetId: string, teamId: string) {
-    const incidents = targetsService.getIncidentLogsByTarget(targetId, teamId);
+    const incidents = await targetsService.getIncidentLogsByTarget(targetId, teamId);
     return { incidents };
   },
 };

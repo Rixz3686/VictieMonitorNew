@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
+import process from "node:process";
 
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   throw new Error("FATAL: JWT_SECRET environment variable is missing in production!");

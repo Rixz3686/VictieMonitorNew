@@ -1,7 +1,8 @@
 import type { Target } from "../../../types";
 import { ICMP_TIMEOUT_MS } from "../../../config/constants";
-import { spawn } from "bun";
 import { checkTCP } from "./tcp.checker";
+
+const spawn = typeof Bun !== "undefined" ? Bun.spawn : null;
 
 interface PipedSubprocess {
   stdout: ReadableStream<Uint8Array>;
@@ -24,6 +25,12 @@ let pingAvailable: boolean | null = null;
 async function isPingAvailable(): Promise<boolean> {
   if (pingAvailable !== null) return pingAvailable;
 
+  if (!spawn) {
+    pingAvailable = false;
+    console.log("[ICMP] Bun.spawn not available (Cloudflare Workers), using TCP fallback.");
+    return false;
+  }
+
   const isWindows = process.platform === "win32";
   const cmd = isWindows
     ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\ping.exe`
@@ -31,7 +38,7 @@ async function isPingAvailable(): Promise<boolean> {
 
   try {
     // Try to spawn ping with help flag to see if it exists
-    const proc = spawn([cmd, isWindows ? "/?" : "-h"], {
+    const proc = spawn!([cmd, isWindows ? "/?" : "-h"], {
       stdout: "pipe",
       stderr: "pipe",
     }) as unknown as PipedSubprocess;
@@ -118,7 +125,7 @@ export async function checkICMP(
 
   try {
     const checkPromise = (async () => {
-      const proc = spawn(pingArgs, { stdout: "pipe", stderr: "pipe" }) as unknown as PipedSubprocess;
+      const proc = spawn!(pingArgs, { stdout: "pipe", stderr: "pipe" }) as unknown as PipedSubprocess;
       processHandle.kill = () => proc.kill();
       
       const [output, _errOutput] = await Promise.all([
