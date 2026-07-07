@@ -263,9 +263,9 @@ Ini adalah langkah **PALING PENTING**. Environment variables berisi konfigurasi 
 | `NODE_ENV` | `production` | Mode production |
 | `JWT_SECRET` | *(lihat cara generate di bawah)* | **WAJIB diisi!** Secret untuk JWT token |
 | `CORS_ORIGIN` | *(kosongkan dulu, diisi di Langkah 9)* | Domain frontend |
-| `TELEGRAM_BOT_TOKEN` | `8761305510:AAGUxpQXsza1spLmAXMI8dW5l5hq5SHEj7Q` | Token bot Telegram Anda |
-| `TELEGRAM_CHAT_ID` | `1368975371` | Chat ID Telegram Anda |
-| `DISCORD_WEBHOOK_URL` | `https://discord.com/api/webhooks/1481117360646656123/mrLBnvUk7Y_vWhrsccKq5bjJW4uwFhzKrJyHzdXiOuSsHecAx04nhUe5l6EY3ukWFoqn` | Webhook Discord |
+| `TELEGRAM_BOT_TOKEN` | *(token bot telegram Anda)* | Token bot Telegram Anda |
+| `TELEGRAM_CHAT_ID` | *(chat id telegram Anda)* | Chat ID Telegram Anda |
+| `DISCORD_WEBHOOK_URL` | *(url webhook discord Anda)* | Webhook Discord |
 | `SMTP_HOST` | `smtp` | Host email SMTP |
 | `SMTP_PORT` | `465` | Port SMTP |
 | `SMTP_USER` | *(email pengirim Anda)* | Email untuk kirim notifikasi |
