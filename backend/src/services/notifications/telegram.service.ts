@@ -1,7 +1,9 @@
-import process from "node:process";
+import { env } from "cloudflare:workers";
+
 export async function sendTelegramAlert(message: string) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const workerEnv = env as any;
+  const token = workerEnv.TELEGRAM_BOT_TOKEN;
+  const chatId = workerEnv.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return;
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

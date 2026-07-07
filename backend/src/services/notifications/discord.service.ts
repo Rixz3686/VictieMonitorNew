@@ -1,12 +1,13 @@
 import type { Target } from "../../types";
-import process from "node:process";
+import { env } from "cloudflare:workers";
 
 export async function sendDiscordAlert(
   target: Target,
   status: "UP" | "DOWN",
   latency: number,
 ) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const workerEnv = env as any;
+  const webhookUrl = workerEnv.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
   const isDown = status === "DOWN";
   const embed = {
