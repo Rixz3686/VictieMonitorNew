@@ -1,0 +1,34 @@
+/* ============================================================
+   LOCAL OFFLINE FONTS - Self-hosted via @fontsource packages
+   Fonts akan tetap tampil bagus meskipun tanpa koneksi internet
+   ============================================================ */
+
+/* --- Poppins (Body text) --- */
+/* Hanya import weight yang digunakan di aplikasi */
+@import "@fontsource/poppins/400.css";  /* Regular */
+@import "@fontsource/poppins/500.css";  /* Medium */
+@import "@fontsource/poppins/600.css";  /* SemiBold */
+@import "@fontsource/poppins/700.css";  /* Bold */
+@import "@fontsource/poppins/800.css";  /* ExtraBold */
+@import "@fontsource/poppins/900.css";  /* Black */
+
+/* --- Oswald (Heading text) --- */
+@import "@fontsource/oswald/400.css";
+@import "@fontsource/oswald/500.css";
+@import "@fontsource/oswald/600.css";
+@import "@fontsource/oswald/700.css";
+
+/* --- Inter (UI elements / alternate body) --- */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+/* --- JetBrains Mono (Monospace / code) --- */
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+/* --- Material Symbols Outlined (Icons) --- */
+@import "material-symbols/outlined.css";
